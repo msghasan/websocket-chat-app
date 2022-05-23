@@ -17,10 +17,10 @@ public class AutomaticMessagingJob extends QuartzJobBean {
 	
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
-        log.info("SimpleJob Start................");
+        log.info("Default Messaging Start................");
         String userName = (String) context.getJobDetail().getKey().getGroup();
         SequenceDTO sequenceDto = (SequenceDTO)context.getJobDetail().getJobDataMap().get("sequenceObject");     
         notificationService.sendPrivateNotification(userName,sequenceDto);
-        log.info("SimpleJob End................");
+        log.info("Default Messaging End................");
     }
 }

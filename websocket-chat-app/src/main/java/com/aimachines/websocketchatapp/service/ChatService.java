@@ -11,6 +11,7 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import com.aimachines.websocketchatapp.enums.JobType;
 import com.aimachines.websocketchatapp.model.ChatMessage;
 import com.aimachines.websocketchatapp.repository.ChatMessageRepository;
 
@@ -29,22 +30,51 @@ public class ChatService {
 	@Autowired 
 	private ChatMessageRepository chatRepository;
 	
+	
+	
 	public void sendMessageToCustomer(ChatMessage chatMessagePojo, SimpMessageHeaderAccessor headerAccessor) {
 		final String time = new SimpleDateFormat("HH:mm").format(new Date());
 		String userName = chatMessagePojo.getSender();
 		chatMessagePojo.setUserName(userName);
 		chatMessagePojo.setTime(time);
 		jobService.deleteJobByGroupName(userName);
-		 chatRepository.deleteAllByUserName(userName);
-			log.info("Deleted all chat history for user " + userName);
-		
+		chatRepository.deleteAllByUserName(userName);
+		log.info("Deleted all chat history for user " + userName);
 
-		log.info("Response After ");
+		JobType salesOrService = checkIfSalesOrService(chatMessagePojo);
+		try {
+			if (salesOrService.equals(JobType.SALES)) {// run jobs for sales
+				sendMessageWithScheduledJobs(chatMessagePojo, headerAccessor, JobType.SALES);
+			} else if (salesOrService.equals(JobType.SERVICE)) {// run job for services
+				sendMessageWithScheduledJobs(chatMessagePojo, headerAccessor, JobType.SERVICE);
+			}
+		} catch (Exception e) {
+			log.error("Error while scheduling messages for service or sales ", e);
+		}
 		messagingTemplate.convertAndSend("/topic/messages/" + chatMessagePojo.getSender(), chatMessagePojo);
-
 	}
+
 	
-	
+	/**
+	 * A method to check whether default messaging should continue or sales and service messages should be fired.
+	 * @param chatMessagePojo
+	 * @return
+	 */
+	private JobType checkIfSalesOrService(ChatMessage chatMessagePojo) {
+		
+		String receivedMessage = chatMessagePojo.getContent().toLowerCase();
+		
+		if(receivedMessage.contains("sale") || receivedMessage.contains("buy")|| receivedMessage.contains("purchase")) {
+			log.info("Customer Wants Help with Sales or Purchase So now will start sending messages related to the Sales");
+			return JobType.SALES;
+		}else if(receivedMessage.contains("service") || receivedMessage.contains("repair")|| receivedMessage.contains("fix")) {
+			log.info("Customer Wants Help with Service So now will start sending messages related to the Sales");
+			return JobType.SERVICE;
+		}
+		return JobType.DEFAULT;
+	}
+
+
 	public void addUserAndStartAutomatedMessage(ChatMessage chatMessagePojo, 
 			SimpMessageHeaderAccessor headerAccessor) throws Exception {
 		// TODO Auto-generated method stub
@@ -59,16 +89,17 @@ public class ChatService {
 
 		} else {
 			// Add username in web socket session
-			sendMessageWithScheduledJobs(chatMessagePojo, headerAccessor);
+			sendMessageWithScheduledJobs(chatMessagePojo, headerAccessor, JobType.DEFAULT);
 		}
 	}
 
 
-	private void sendMessageWithScheduledJobs(ChatMessage chatMessagePojo, SimpMessageHeaderAccessor headerAccessor)
+	private void sendMessageWithScheduledJobs(ChatMessage chatMessagePojo, SimpMessageHeaderAccessor headerAccessor, JobType jobType)
 			throws Exception {
 		String userName = chatMessagePojo.getSender();
 		headerAccessor.getSessionAttributes().put("username", userName);
-		jobService.scheduleAllJobs(userName);
+		jobService.scheduleAllJobs(userName,jobType);
+		if(jobType.equals(JobType.DEFAULT))
 		messagingTemplate.convertAndSend("/topic/messages/" + chatMessagePojo.getSender(), chatMessagePojo);
 	}
 	

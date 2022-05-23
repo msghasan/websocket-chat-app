@@ -17,6 +17,7 @@ import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.aimachines.websocketchatapp.enums.JobType;
 import com.aimachines.websocketchatapp.listeners.JobEventListener;
 import com.aimachines.websocketchatapp.model.SchedulerJobInfo;
 import com.aimachines.websocketchatapp.repository.SchedulerRepository;
@@ -81,9 +82,11 @@ public class SchedulerJobService {
 		}
 	}
 
-	public void scheduleAllJobs(String userName) throws Exception {
+	public void scheduleAllJobs(String userName, JobType typeOfJob) throws Exception {
 
-		List<SchedulerJobInfo> jobInfoList = SequenceAndSchedulerJobCreator.createJobObjects(userName);
+		List<SchedulerJobInfo> jobInfoList = null;
+		
+		jobInfoList = SequenceAndSchedulerJobCreator.createJobObjects(userName, typeOfJob);
 			
 		for(SchedulerJobInfo jobInfo:jobInfoList) {
 			

@@ -10,9 +10,6 @@ import org.springframework.stereotype.Controller;
 import com.aimachines.websocketchatapp.model.ChatMessage;
 import com.aimachines.websocketchatapp.service.ChatService;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 @Controller
 public class ChatController {
 
